@@ -1,0 +1,118 @@
+#define BLYNK_TEMPLATE_ID "TMPL3ttdSMoWb"
+#define BLYNK_TEMPLATE_NAME "smart dustbin"
+#define BLYNK_AUTH_TOKEN "H2Gk0kEgu2Z-XRGVDFrUuhXJZG5VrA4o"
+#include <Adafruit_Sensor.h>
+ 
+#include <ESP32Servo.h>
+
+#include <WiFi.h>
+#include <WiFiClient.h>
+#include <BlynkSimpleEsp32.h>
+#define BLYNK_PRINT Serial
+char auth[] = BLYNK_AUTH_TOKEN;
+
+// Your WiFi credentials.
+// Set password to "" for open networks.
+char ssid[] = "rpi";
+char pass[] = "12345678";
+
+BlynkTimer timer; 
+#include <LiquidCrystal_I2C.h>
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+//sda D2, sdl D1
+
+Servo myservo;
+Servo myservo1;
+int mdelay=3000;
+ 
+#define echoPin1 18
+#define trigPin1 19
+
+#define echoPin2 13
+#define trigPin2 12
+#define buzzer 15
+
+long duration;
+int distance; 
+
+
+int obstacle(int trigPinx, int echoPinx) {
+  digitalWrite(trigPinx, LOW);
+  delayMicroseconds(2);
+
+  digitalWrite(trigPinx, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trigPinx, LOW);
+
+  duration = pulseIn(echoPinx, HIGH);
+
+  distance = duration * 0.034 / 2;
+  return distance;
+} 
+
+ 
+ void frontdetection()
+{
+   int dist2 = obstacle(trigPin2,echoPin2); 
+     Serial.println(dist2);
+ if (dist2 < 10){
+ myservo1.write(90);
+   delay( mdelay);
+  }
+  else{
+  myservo1.write(180);
+   delay( mdelay);
+  } 
+  }
+void leveldetection()
+{  
+  int dist1 = obstacle(trigPin1,echoPin1);
+//       Serial.println(dist1);
+  Blynk.virtualWrite(V2,dist1);
+   if (dist1 < 10){
+  Blynk.virtualWrite(V1,"Dustbin is overfull");
+  Serial.println(dist1);
+  
+lcd.setCursor(8, 1);  
+lcd.print("D- FULL");
+  }
+  else{
+ // Blynk.notify("Dustbin is supposed to be overfull");
+lcd.setCursor(8, 1);  
+lcd.print("D- EMPTY");
+  Blynk.virtualWrite(V1,"Dustbin is normal");
+  }   
+}
+void setup()
+{
+Serial.begin(115200);
+Blynk.begin(auth, ssid, pass, "blynk.cloud", 80);  
+  lcd.init();
+  lcd.backlight();
+  
+  myservo.attach(5); 
+ // myservo.write(90);
+
+  myservo1.attach(23); 
+  myservo1.write(90);
+  
+ pinMode(buzzer, OUTPUT); 
+ pinMode(trigPin1, OUTPUT);
+ pinMode(echoPin1, INPUT);
+ pinMode(trigPin2, OUTPUT);
+ pinMode(echoPin2, INPUT);
+
+ timer.setInterval(1000L, leveldetection);
+ timer.setInterval(2000L, frontdetection); 
+ 
+}
+
+
+
+void loop()
+{
+  
+Blynk.run();
+timer.run();
+
+}
